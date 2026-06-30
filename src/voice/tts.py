@@ -35,7 +35,8 @@ class TTSProvider:
         if out_dir and not os.path.exists(out_dir):
             os.makedirs(out_dir)
 
-        logger.info(f"Generating TTS for text: '{text[:30]}...' using voice: {voice}, rate: {rate_str}, pitch: {pitch_str}")
+        log_preview = f"'{text[:30]}...'" if len(text) > 30 else f"'{text}'"
+        logger.info(f"Generating TTS for text: {log_preview} using voice: {voice}, rate: {rate_str}, pitch: {pitch_str}")
         
         try:
             communicate = edge_tts.Communicate(text, voice, rate=rate_str, pitch=pitch_str)
@@ -44,29 +45,16 @@ class TTSProvider:
             return output_path
         except Exception as e:
             logger.error(f"Error generating speech audio via edge-tts: {e}")
-            raise e
+            raise  # Bare raise to preserve original traceback
 
     def generate(self, text: str, output_path: str = None, voice_name: str = None, rate: str = None, pitch: str = None) -> str:
         """
         Synchronous wrapper to generate speech from text.
+        Uses asyncio.run() for clean event loop management (Python 3.10+ compatible).
         """
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-
-        if loop.is_running():
-            # If the loop is already running, run it in a thread or execute it asynchronously
-            # This is simple and works for most cases
-            future = asyncio.run_coroutine_threadsafe(
-                self.generate_async(text, output_path, voice_name, rate, pitch), loop
-            )
-            return future.result()
-        else:
-            return loop.run_until_complete(
-                self.generate_async(text, output_path, voice_name, rate, pitch)
-            )
+        return asyncio.run(
+            self.generate_async(text, output_path, voice_name, rate, pitch)
+        )
 
     async def stream_async(self, text: str, voice_name: str = None, rate: str = None, pitch: str = None):
         """

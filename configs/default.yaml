@@ -23,14 +23,15 @@ avatar:
   default_face: "assets/avatar/mc_default.png"
   output_dir: "assets/video"
   fps: 25
+  checkpoint_path: "checkpoints/wav2lip.pth"
 
 streaming:
   obs_websocket:
     host: "localhost"
     port: 4455
-    password: "change_me"
+    password: "${OBS_PASSWORD:}"  # Set OBS_PASSWORD environment variable
   rtmp_url: "rtmp://localhost/live"
-  stream_key: "default_stream_key"
+  stream_key: "${STREAM_KEY:}"  # Set STREAM_KEY environment variable
 
 automation:
   product_file: "configs/products.json"

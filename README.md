@@ -36,11 +36,79 @@ pip install -r requirements.txt
 ```
 
 ### 2. Cấu hình dự án
+
 Tất cả các tham số cấu hình được đặt tại `configs/default.yaml`. Bạn có thể sao chép cấu hình và điều chỉnh cho phù hợp.
 
-### 3. Chạy thử nghiệm
-Khi hoàn tất thiết lập Phase 0, khởi chạy dự án để xác minh log và cấu hình:
+**Cấu hình bảo mật (Secrets):** Mật khẩu OBS và Stream Key được đọc từ biến môi trường, không lưu trực tiếp trong file config:
+```powershell
+# Thiết lập biến môi trường trước khi chạy
+$env:OBS_PASSWORD = "your_obs_password"
+$env:STREAM_KEY = "your_stream_key"
+```
+
+### 3. Chạy Demo (Text → Voice → Avatar Video)
+
+Đây là pipeline chính để tạo video MC ảo nói chuyện từ kịch bản text:
+
+```powershell
+python demo.py
+```
+
+Bạn có thể:
+- Nhấn **Enter** để dùng kịch bản mặc định.
+- Nhập **đường dẫn file** chứa kịch bản (ví dụ: `configs/script_quan_tay.txt`).
+- Nhập **trực tiếp** kịch bản trên một dòng.
+
+Video đầu ra sẽ được lưu tại `assets/video/demo_avatar.mp4`.
+
+### 4. Chạy xác minh Phase 0 (Foundation)
+
+Kiểm tra hệ thống log và cấu hình:
 
 ```powershell
 python -m src.main
+```
+
+### 5. Chạy Test Scripts
+
+```powershell
+# Test Text-to-Speech
+python scripts/test_tts.py
+
+# Test TTS Streaming
+python scripts/test_tts_stream.py
+
+# Test Avatar Generation
+python scripts/test_avatar.py
+```
+
+---
+
+## 📋 Yêu Cầu Hệ Thống
+
+- **Python**: 3.10+
+- **FFmpeg**: Cần cài đặt để merge audio/video. Cài qua `winget install ffmpeg` trên Windows.
+- **OS**: Windows 10/11 (đã kiểm thử). Có thể chạy trên macOS/Linux.
+
+---
+
+## 📁 Cấu Trúc Thư Mục
+
+```
+AI_MC/
+├── assets/            # Tài nguyên (audio, video, avatar)
+├── configs/           # File cấu hình YAML và kịch bản
+├── docs/              # Tài liệu dự án
+├── logs/              # File log ứng dụng
+├── scripts/           # Script kiểm thử thủ công
+├── src/               # Mã nguồn chính
+│   ├── avatar/        # Module đồng bộ khẩu hình (lip sync)
+│   ├── automation/    # Module tự động hóa (coming soon)
+│   ├── streaming/     # Module phát trực tiếp (coming soon)
+│   ├── utils/         # Tiện ích (config, logger)
+│   └── voice/         # Module Text-to-Speech
+├── tests/             # Unit tests
+├── demo.py            # Pipeline demo chính
+├── pyproject.toml     # Cấu hình package Python
+└── requirements.txt   # Danh sách thư viện phụ thuộc
 ```

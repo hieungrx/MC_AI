@@ -39,7 +39,8 @@ def setup_logger(name="AI_MC", log_file="logs/app.log", level=logging.INFO, max_
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     except Exception as e:
-        print(f"Warning: Failed to set up rotating file handler for logging: {e}")
+        # Use the console handler that was already added above
+        logger.warning(f"Failed to set up rotating file handler for logging: {e}")
 
     return logger
 

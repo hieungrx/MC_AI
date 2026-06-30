@@ -1,9 +1,31 @@
 import os
 import sys
+from pathlib import Path
+
+# Add project root to sys.path to allow imports from src
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
 from src.utils.logger import logger
 from src.utils.config import config
 from src.voice.tts import tts_provider
 from src.avatar.lip_sync import avatar_generator
+
+
+def _read_script_file(file_path: str) -> str:
+    """
+    Reads script text from a file. Returns the text content or None on failure.
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            text = f.read().strip()
+        logger.info(f"Đã đọc kịch bản thành công từ file: {file_path}")
+        return text
+    except Exception as e:
+        logger.error(f"Không thể đọc file {file_path}: {e}")
+        return None
+
 
 def run_pipeline_demo():
     banner = """
@@ -33,32 +55,21 @@ def run_pipeline_demo():
     if user_input:
         # Check if user input is a file path
         if os.path.exists(user_input):
-            try:
-                with open(user_input, 'r', encoding='utf-8') as f:
-                    script_text = f.read().strip()
-                logger.info(f"Đã đọc kịch bản thành công từ file: {user_input}")
-            except Exception as e:
-                logger.error(f"Không thể đọc file {user_input}: {e}. Sẽ dùng kịch bản trực tiếp.")
-                script_text = user_input
+            result = _read_script_file(user_input)
+            script_text = result if result else user_input
         else:
             # Check if it exists in configs directory
             config_try = os.path.join("configs", user_input)
             if os.path.exists(config_try):
-                try:
-                    with open(config_try, 'r', encoding='utf-8') as f:
-                        script_text = f.read().strip()
-                    logger.info(f"Đã đọc kịch bản thành công từ file: {config_try}")
-                except Exception as e:
-                    logger.error(f"Không thể đọc file {config_try}: {e}. Sẽ dùng kịch bản trực tiếp.")
-                    script_text = user_input
+                result = _read_script_file(config_try)
+                script_text = result if result else user_input
             else:
                 script_text = user_input
 
-
     # Step 2: Define Output paths
-    audio_output = "assets/audio/demo_voice.mp3"
-    video_output = "assets/video/demo_avatar.mp4"
-    face_image = "assets/avatar/mc_default.png"
+    audio_output = config.get("voice.output_dir", "assets/audio") + "/demo_voice.mp3"
+    video_output = config.get("avatar.output_dir", "assets/video") + "/demo_avatar.mp4"
+    face_image = config.get("avatar.default_face", "assets/avatar/mc_default.png")
 
     # Step 3: Run TTS (Text -> Audio)
     print("\n[Bước 1/2] Đang chuyển đổi kịch bản thành giọng nói MC (Text-to-Speech)...")

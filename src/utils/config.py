@@ -1,5 +1,4 @@
 import os
-import sys
 
 # Default fallback configurations
 DEFAULT_CONFIG = {
@@ -25,16 +24,17 @@ DEFAULT_CONFIG = {
         "model_name": "wav2lip",
         "default_face": "assets/avatar/mc_default.png",
         "output_dir": "assets/video",
-        "fps": 25
+        "fps": 25,
+        "checkpoint_path": "checkpoints/wav2lip.pth"
     },
     "streaming": {
         "obs_websocket": {
             "host": "localhost",
             "port": 4455,
-            "password": "change_me"
+            "password": ""  # Set via OBS_PASSWORD environment variable
         },
         "rtmp_url": "rtmp://localhost/live",
-        "stream_key": "default_stream_key"
+        "stream_key": ""  # Set via STREAM_KEY environment variable
     },
     "automation": {
         "product_file": "configs/products.json",
@@ -61,9 +61,28 @@ class Config:
     def data(self):
         return self._data
 
+def _resolve_env_vars(data):
+    """
+    Recursively resolve environment variable placeholders in config values.
+    Supports the format: ${ENV_VAR_NAME} or ${ENV_VAR_NAME:default_value}
+    """
+    if isinstance(data, dict):
+        return {k: _resolve_env_vars(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [_resolve_env_vars(item) for item in data]
+    elif isinstance(data, str) and data.startswith("${") and data.endswith("}"):
+        inner = data[2:-1]
+        if ":" in inner:
+            env_key, default_val = inner.split(":", 1)
+        else:
+            env_key, default_val = inner, ""
+        return os.environ.get(env_key, default_val)
+    return data
+
 def load_config(config_path="configs/default.yaml"):
     """
     Loads configuration from a YAML file. Fallbacks to DEFAULT_CONFIG if loading fails.
+    Environment variable placeholders (${VAR_NAME} or ${VAR_NAME:default}) are resolved.
     """
     if not os.path.exists(config_path):
         print(f"Warning: Configuration file {config_path} not found. Using defaults.")
@@ -75,7 +94,9 @@ def load_config(config_path="configs/default.yaml"):
             data = yaml.safe_load(f)
             # Simple merge with default config to ensure all keys exist
             merged = merge_configs(DEFAULT_CONFIG, data or {})
-            return Config(merged)
+            # Resolve environment variable references
+            resolved = _resolve_env_vars(merged)
+            return Config(resolved)
     except ImportError:
         print("Warning: PyYAML is not installed. To parse YAML files, install PyYAML. Using defaults.")
         return Config(DEFAULT_CONFIG)

@@ -17,6 +17,32 @@ class AvatarGenerator:
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
+    def _get_ffmpeg_command(self, name: str) -> str:
+        """
+        Resolves the executable name (ffmpeg or ffprobe) to an absolute path if not in system PATH.
+        """
+        # First check if it is available in system PATH
+        try:
+            subprocess.run([name, "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+            return name
+        except Exception:
+            pass
+
+        # Try to look in WinGet folders
+        username = os.environ.get("USERNAME", "Admin")
+        winget_links_path = f"C:\\Users\\{username}\\AppData\\Local\\Microsoft\\WinGet\\Links\\{name}.exe"
+        if os.path.exists(winget_links_path):
+            return winget_links_path
+
+        # Try another standard location (recursive look inside packages)
+        packages_dir = f"C:\\Users\\{username}\\AppData\\Local\\Microsoft\\WinGet\\Packages"
+        if os.path.exists(packages_dir):
+            for root, dirs, files in os.walk(packages_dir):
+                if f"{name}.exe" in files:
+                    return os.path.join(root, f"{name}.exe")
+
+        return name
+
     def _get_audio_duration(self, audio_path: str) -> float:
         """
         Retrieves the duration of the audio file in seconds.
@@ -24,9 +50,10 @@ class AvatarGenerator:
         """
         # Try using ffprobe
         try:
+            ffprobe_cmd = self._get_ffmpeg_command("ffprobe")
             cmd = [
-                "ffprobe", "-v", "error", "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nocey=1", "-i", audio_path
+                ffprobe_cmd, "-v", "error", "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1", "-i", audio_path
             ]
             # Strip key=val if nocey is not working, on Windows we can parse output
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
@@ -188,8 +215,9 @@ class AvatarGenerator:
             if os.path.exists(final_video_path):
                 os.remove(final_video_path)
                 
+            ffmpeg_cmd = self._get_ffmpeg_command("ffmpeg")
             cmd = [
-                "ffmpeg", "-y", "-i", temp_video_path, "-i", audio_path,
+                ffmpeg_cmd, "-y", "-i", temp_video_path, "-i", audio_path,
                 "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac",
                 "-shortest", final_video_path
             ]

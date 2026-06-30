@@ -1,0 +1,37 @@
+# Configuration for AI MC Live Stream
+
+app:
+  name: "AI_MC"
+  version: "0.1.0"
+  env: "development" # development, staging, production
+
+logging:
+  level: "INFO"
+  file_path: "logs/app.log"
+  max_bytes: 10485760 # 10MB
+  backup_count: 5
+
+voice:
+  provider: "edge-tts" # edge-tts, google-cloud, elevenlabs, etc.
+  voice_name: "vi-VN-HoaiMyNeural" # Default Vietnamese voice
+  speed: "+0%"
+  pitch: "+0Hz"
+  output_dir: "assets/audio"
+
+avatar:
+  model_name: "wav2lip" # wav2lip, sadtalker, liveportrait
+  default_face: "assets/avatar/mc_default.png"
+  output_dir: "assets/video"
+  fps: 25
+
+streaming:
+  obs_websocket:
+    host: "localhost"
+    port: 4455
+    password: "change_me"
+  rtmp_url: "rtmp://localhost/live"
+  stream_key: "default_stream_key"
+
+automation:
+  product_file: "configs/products.json"
+  loop_interval: 10 # seconds between script runs if in manual loop

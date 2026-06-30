@@ -131,19 +131,31 @@ class AvatarGenerator:
         # Temporary video file path (without audio)
         temp_video_path = output_path.replace(".mp4", "_temp.mp4")
         
-        # Define mouth region (heuristics for 1:1 close-up portrait of head)
-        # We assume the mouth is centered horizontally and in the lower third vertically
-        mouth_y1 = int(height * 0.60)
-        mouth_y2 = int(height * 0.68)
-        mouth_x1 = int(width * 0.44)
-        mouth_x2 = int(width * 0.56)
+        # Detect face using Haar Cascade to position mouth dynamically
+        face_cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        face_cascade = cv2.CascadeClassifier(face_cascade_path)
+        
+        has_face = False
+        if not face_cascade.empty():
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(100, 100))
+            if len(faces) > 0:
+                faces = sorted(faces, key=lambda f: f[2] * f[3], reverse=True)
+                fx, fy, fw, fh = faces[0]
+                mouth_x = fx + fw // 2
+                # Mouth is typically around 73% down the face box
+                mouth_y = fy + int(fh * 0.73)
+                rx = int(fw * 0.12)
+                ry_max = int(fh * 0.06)
+                has_face = True
+                logger.info(f"Face detected for lip sync: x={fx}, y={fy}, w={fw}, h={fh}. Mouth centered at ({mouth_x}, {mouth_y})")
 
-        # Ensure coordinates are within image boundaries
-        mouth_y1, mouth_y2 = max(0, mouth_y1), min(height, mouth_y2)
-        mouth_x1, mouth_x2 = max(0, mouth_x1), min(width, mouth_x2)
-
-        mouth_h = mouth_y2 - mouth_y1
-        mouth_w = mouth_x2 - mouth_x1
+        if not has_face:
+            logger.warning("No face detected by Haar Cascade. Using default portrait heuristics.")
+            mouth_x = int(width * 0.50)
+            mouth_y = int(height * 0.65)
+            rx = int(width * 0.035)
+            ry_max = int(height * 0.022)
 
         # Define VideoWriter (use mp4v codec for compatibility)
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
@@ -163,12 +175,11 @@ class AvatarGenerator:
             
             # Animate only if within speech duration
             if i < total_frames - 5: # Close mouth at the very end
-                cx = (mouth_x1 + mouth_x2) // 2
-                cy = (mouth_y1 + mouth_y2) // 2
+                cx = mouth_x
+                cy = mouth_y
                 
                 # Draw mouth cavity (dark oval)
-                rx = int(width * 0.035)  # around 35 pixels for 1024x1024
-                ry = int(height * 0.022 * open_factor)  # vertical opening up to 22 pixels
+                ry = int(ry_max * open_factor)  # vertical opening
                 
                 if ry > 2:
                     overlay = frame.copy()

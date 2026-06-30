@@ -163,44 +163,31 @@ class AvatarGenerator:
             
             # Animate only if within speech duration
             if i < total_frames - 5: # Close mouth at the very end
-                # Scale mouth height based on open factor
-                new_h = int(mouth_h * (0.8 + 0.5 * open_factor))
+                cx = (mouth_x1 + mouth_x2) // 2
+                cy = (mouth_y1 + mouth_y2) // 2
                 
-                # Crop mouth region
-                mouth = img[mouth_y1:mouth_y2, mouth_x1:mouth_x2]
+                # Draw mouth cavity (dark oval)
+                rx = int(width * 0.035)  # around 35 pixels for 1024x1024
+                ry = int(height * 0.022 * open_factor)  # vertical opening up to 22 pixels
                 
-                # Resize mouth vertically
-                resized_mouth = cv2.resize(mouth, (mouth_w, new_h), interpolation=cv2.INTER_LINEAR)
-                
-                # Overlay mouth back
-                # Calculate center to place it
-                center_y = (mouth_y1 + mouth_y2) // 2
-                start_y = max(0, center_y - new_h // 2)
-                end_y = min(height, start_y + new_h)
-                
-                # Match dimensions in case of rounding errors
-                resized_mouth = resized_mouth[:(end_y - start_y), :]
-                
-                # Blend the edges to avoid harsh seams
-                mask = np.zeros_like(frame[start_y:end_y, mouth_x1:mouth_x2])
-                # Radial gradient mask
-                mask_h, mask_w, _ = mask.shape
-                for y_idx in range(mask_h):
-                    for x_idx in range(mask_w):
-                        # Gaussian-like blend at edges
-                        dy = abs(y_idx - mask_h/2) / (mask_h/2 + 1e-5)
-                        dx = abs(x_idx - mask_w/2) / (mask_w/2 + 1e-5)
-                        dist = max(dy, dx)
-                        blend = max(0.0, 1.0 - dist**3)
-                        mask[y_idx, x_idx] = [blend, blend, blend]
-                
-                # Interpolate original frame and animated mouth using the mask
-                original_region = frame[start_y:end_y, mouth_x1:mouth_x2].astype(float)
-                mouth_region = resized_mouth.astype(float)
-                mask = mask.astype(float)
-                
-                blended = (mouth_region * mask + original_region * (1.0 - mask)).astype(np.uint8)
-                frame[start_y:end_y, mouth_x1:mouth_x2] = blended
+                if ry > 2:
+                    overlay = frame.copy()
+                    # 1. Dark mouth cavity
+                    cv2.ellipse(overlay, (cx, cy), (rx, ry), 0, 0, 360, (20, 20, 50), -1)
+                    
+                    # 2. Teeth (white lines)
+                    # Upper teeth
+                    cv2.line(overlay, (cx - rx + 8, cy - ry + 3), (cx + rx - 8, cy - ry + 3), (250, 250, 250), 3)
+                    # Lower teeth (show if open wide)
+                    if ry > 8:
+                        cv2.line(overlay, (cx - rx + 12, cy + ry - 3), (cx + rx - 12, cy + ry - 3), (250, 250, 250), 2)
+                        
+                    # 3. Red lips outline
+                    cv2.ellipse(overlay, (cx, cy), (rx + 2, ry + 2), 0, 0, 360, (50, 50, 190), 2)
+                    
+                    # Alpha blend overlay with frame to soften the edges
+                    alpha = 0.90
+                    cv2.addWeighted(overlay, alpha, frame, 1.0 - alpha, 0, frame)
 
             out.write(frame)
 

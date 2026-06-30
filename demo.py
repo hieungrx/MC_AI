@@ -24,10 +24,36 @@ def run_pipeline_demo():
     )
     
     print("\n--- NHẬP KỊCH BẢN CHO MC ---")
-    print(f"Nhấn Enter để dùng kịch bản mặc định:\n> '{default_script}'")
-    user_input = input("\nHoặc nhập kịch bản của riêng bạn: ").strip()
+    print(f"1. Nhấn Enter để dùng kịch bản mặc định.")
+    print(f"2. Nhập đường dẫn file chứa kịch bản (ví dụ: configs/script_quan_tay.txt).")
+    print(f"3. Nhập trực tiếp kịch bản trên một dòng.")
+    user_input = input("\nNhập lựa chọn của bạn: ").strip()
     
-    script_text = user_input if user_input else default_script
+    script_text = default_script
+    if user_input:
+        # Check if user input is a file path
+        if os.path.exists(user_input):
+            try:
+                with open(user_input, 'r', encoding='utf-8') as f:
+                    script_text = f.read().strip()
+                logger.info(f"Đã đọc kịch bản thành công từ file: {user_input}")
+            except Exception as e:
+                logger.error(f"Không thể đọc file {user_input}: {e}. Sẽ dùng kịch bản trực tiếp.")
+                script_text = user_input
+        else:
+            # Check if it exists in configs directory
+            config_try = os.path.join("configs", user_input)
+            if os.path.exists(config_try):
+                try:
+                    with open(config_try, 'r', encoding='utf-8') as f:
+                        script_text = f.read().strip()
+                    logger.info(f"Đã đọc kịch bản thành công từ file: {config_try}")
+                except Exception as e:
+                    logger.error(f"Không thể đọc file {config_try}: {e}. Sẽ dùng kịch bản trực tiếp.")
+                    script_text = user_input
+            else:
+                script_text = user_input
+
 
     # Step 2: Define Output paths
     audio_output = "assets/audio/demo_voice.mp3"

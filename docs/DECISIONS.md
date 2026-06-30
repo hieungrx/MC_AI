@@ -40,3 +40,19 @@ Tài liệu này lưu trữ các quyết định kỹ thuật quan trọng của
     *   **Hiệu năng tốt**: Phản hồi nhanh và hỗ trợ xuất dạng tệp âm thanh hoặc stream byte chunks trực tiếp.
 *   **Hậu quả / Tác động**: Hệ thống sẽ phụ thuộc vào kết nối mạng internet để gọi dịch vụ Edge-TTS. Sau này, nếu cần hoạt động offline hoàn toàn, ta có thể bổ sung provider TTS local (như XTTS, Coqui-TTS) hoặc các Cloud API cao cấp hơn (ElevenLabs, Google TTS) nhờ thiết kế trừu tượng (Factory Pattern).
 
+---
+
+## 📅 [01/07/2026] DEC-004: Lựa chọn Wav2Lip làm mô hình Lip Sync chính kèm cơ chế mô phỏng (Simulation Fallback)
+
+*   **Trạng thái**: Đã Quyết Định
+*   **Người đề xuất**: AI Agent
+*   **Bối cảnh**: Cần tích hợp mô hình đồng bộ môi (Lip Sync). Mô hình Wav2Lip rất phổ biến và nhẹ nhất, tuy nhiên việc chạy học máy thực tế yêu cầu cài đặt các gói nặng (`torch`, `torchvision`), tải trọng số (checkpoint weights) lớn hơn 100MB, và cấu hình CUDA phù hợp. Trong môi trường thử nghiệm sandbox hoặc máy tính không có GPU mạnh, quá trình này có thể bị nghẽn.
+*   **Quyết định**:
+    1. Lựa chọn **Wav2Lip** làm lõi đồng bộ môi chính của dự án.
+    2. Hiện thực cấu trúc mã nguồn sẵn sàng cho việc gọi mô hình Wav2Lip thực tế.
+    3. Thiết lập **Cơ chế Mô Phỏng (Simulation Fallback)**: Nếu không phát hiện tệp checkpoint `checkpoints/wav2lip.pth` hoặc máy thiếu phần cứng phù hợp, module sẽ tự động tạo video mô phỏng (sử dụng OpenCV vẽ cử động môi ngẫu nhiên trên ảnh đại diện khớp theo độ dài của file audio).
+*   **Lý do lựa chọn**:
+    *   Giúp dự án luôn ở trạng thái **runnable** (chạy được) ngay cả khi chưa tải xong trọng số mô hình hoặc chạy trên thiết bị cấu hình yếu.
+    *   Tách biệt logic xử lý giúp người dùng dễ dàng chuyển đổi sang chế độ chạy mô hình thực tế bằng cách tải file checkpoint đặt vào thư mục chỉ định.
+
+
